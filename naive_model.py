@@ -12,6 +12,17 @@ def compute_next_frame(position_i_minus_1, position_i, k):
     y2 = ((position_i[3] - position_i_minus_1[3]) / k) + position_i_minus_1[3]
     return np.array([x1, y1, x2, y2])
 
+def compute_next_frame_brawnian_dymn(position_i_minus_1, position_i, k):
+    # compute the point (x1, y1) in the (1/omit_factor) * the distance
+    # between the two points
+    x1 = ((position_i[0] - position_i_minus_1[0]) / k) + position_i_minus_1[0]
+    y1 = ((position_i[1] - position_i_minus_1[1]) / k) + position_i_minus_1[1]
+    # compute the point (x2, y2) in the (1/omit_factor) * the distance
+    # between the two points
+    x2 = ((position_i[2] - position_i_minus_1[2]) / k) + position_i_minus_1[2]
+    y2 = ((position_i[3] - position_i_minus_1[3]) / k) + position_i_minus_1[3]
+    return np.array([x1, y1, x2, y2])
+
 
 def get_high_resolution(X_low, omit_factor):
     X_high = np.zeros((omit_factor * X_low.shape[0] - omit_factor + 1, 4))
