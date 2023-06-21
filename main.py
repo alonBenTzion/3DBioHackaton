@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-import matplotlib.pyplot as plt
+import naive_model
+
 
 kT = 0.6 # Boltzmann constant kcal/mol at room temperature
 frame_max = 10
@@ -135,7 +136,7 @@ def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded=False,
 # Please plot the probability distribution of the angle between the two
 # particles at the end of the simulation, conditioned on the distance between
 # the two particles being 2 um.
-def plot_trajectories(T, X, complicated= False):
+def plot_trajectories(T, X, complicated= False, title=''):
     '''
     plots the trajectories of the two particles.
     @param T - the time vector
@@ -153,6 +154,7 @@ def plot_trajectories(T, X, complicated= False):
         # plot both series on the same plot
         plt.plot(X[:, 0], X[:, 1], label='particle 1')
         plt.plot(X[:, 2], X[:, 3], label='particle 2')
+    plt.title(title)
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()
@@ -259,7 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('--T', type=float, default=1)
     parser.add_argument('--N_steps', type=int, default=100000)
     parser.add_argument('--upper_bounded', type=bool, default=True)
-    parser.add_argument('--omitted_frame', type=int, default=1)
+    parser.add_argument('--omitted_frame', type=int, default=100)
     args = parser.parse_args()
     T, X = generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
 
@@ -270,9 +272,13 @@ if __name__ == '__main__':
     T_high_resolution = T
     X_high_resolution = X
 
-    plot_trajectories(T_low_resolution, X_low_resolution, complicated=False)
-    plot_trajectories(T_high_resolution, X_high_resolution, complicated=False)
+    plot_trajectories(T_low_resolution, X_low_resolution, complicated=False, title='low resolution')
+    plot_trajectories(T_high_resolution, X_high_resolution, complicated=False, title='high resolution')
 
+    X_high_naive_model = naive_model.get_high_resolution(X_low_resolution,
+                                                         args.omitted_frame + 1)
+    plot_trajectories(T_high_resolution, X_high_naive_model, complicated=False, title='naive model')
+    plt.show()
     # output the results to a npy file
     np.save('T_low_resolution.npy', T_low_resolution)
     np.save('X_low_resolution.npy', X_low_resolution)
