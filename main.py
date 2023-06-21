@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import argparse
 
 kT = 0.6 # Boltzmann constant kcal/mol at room temperature
+frame_max = 10
+frame_min = -10
 
 # General comments:
 # ==================
@@ -111,19 +113,12 @@ def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded=False,
     rng = np.random.default_rng()
     # iterate over the time steps
     for i in range(1,N_steps):
-        # # compute the force on each particle
-        # r = np.linalg.norm(X[i-1, 0:2] - X[i-1, 2:4])
-        # F_magnitude = harmonic_potential_derivative(r, r0, k) # units of kT/A
-        # F1 = -F_magnitude * (X[i-1, 0:2] - X[i-1, 2:4]) / r
-        # F2 = -F_magnitude * (X[i-1, 2:4] - X[i-1, 0:2]) / r
-        # # compute the random forces
-        # R1 = rng.normal(0, 1, 2)
-        # R2 = rng.normal(0, 1, 2)
-        # # compute the new positions
-        # dx1 = dt * D / kT * F1 + np.sqrt(2 * D * dt) * R1 # TODO verify BD equation
-        # dx2 = dt * D / kT * F2 + np.sqrt(2 * D * dt) * R2
         dx1, dx2 = compute_dx(dt, D, k, r0, X[i-1, 0:2], X[i-1, 2:4], upper_bounded, r_max)
         X[i,:] = X[i-1,:] + np.hstack((dx1, dx2))
+
+        # update all coordinates if they are above a certain value
+        X[i,:] = np.where(X[i,:] > frame_max, frame_max, X[i,:])
+        X[i,:] = np.where(X[i,:] < frame_min, frame_min, X[i,:])
     return T, X
 
 # Please plot the trajectories of the two particles.
