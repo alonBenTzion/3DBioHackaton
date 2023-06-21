@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import matplotlib.pyplot as plt
 
 kT = 0.6 # Boltzmann constant kcal/mol at room temperature
 frame_max = 10
@@ -140,7 +141,7 @@ def plot_trajectories(T, X, complicated= False):
     @param T - the time vector
     @param X - the position matrix
     '''
-    import matplotlib.pyplot as plt
+
     plt.figure()
     if complicated:
         # plot both series on the same plot
@@ -155,6 +156,7 @@ def plot_trajectories(T, X, complicated= False):
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()
+    plt.show()
 
 # Please plot the MSD (mean squared displacement) of the two particles as a
 # function of time.
@@ -267,6 +269,9 @@ if __name__ == '__main__':
     X_low_resolution = X[::args.omitted_frame+1]
     T_high_resolution = T
     X_high_resolution = X
+
+    plot_trajectories(T_low_resolution, X_low_resolution, complicated=False)
+    plot_trajectories(T_high_resolution, X_high_resolution, complicated=False)
 
     # output the results to a npy file
     np.save('T_low_resolution.npy', T_low_resolution)
