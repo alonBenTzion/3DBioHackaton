@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 kT = 0.6 # Boltzmann constant kcal/mol at room temperature
 
@@ -34,7 +35,7 @@ def harmonic_potential_derivative(r, r0, k):
 
 # return the derivative of a bounded harmonic potential (i.e. a potential
 # that is zero outside of a certain range)
-def get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_min, r_max):
+def get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_max):
     '''
     computes the derivative of the harmonic potential where k=1 kT/A^2.
     @param r - the position of the particle
@@ -54,7 +55,39 @@ def get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_min, r_max):
     else:
         return harmonic_potential_derivative(r, r0, k)
 
-def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps):
+# Compute thh force on each particle in each time step based on the previous positions
+# get the previous positions of the particles and returns dx1 and dx2
+def compute_dx(dt, D, k, r0, x1, x2, upper_bounded=False, r_max=10):
+    '''
+    computes the change in position of the two particles based on the
+    previous positions.
+    @param dt - the time step
+    @param D - the diffusion coefficient
+    @param k - the spring constant
+    @param r0 - the equilibrium position of the particle (rest length)
+    @param x1 - the position of the first particle
+    @param x2 - the position of the second particle
+    '''
+    # compute the force on each particle
+    r = np.linalg.norm(x1 - x2)
+    if upper_bounded:
+        F_magnitude = get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_max)
+    else:
+        F_magnitude = harmonic_potential_derivative(r, r0, k) # units of kT/A
+    F1 = -F_magnitude * (x1 - x2) / r
+    F2 = -F_magnitude * (x2 - x1) / r
+    # compute the random forces
+    rng = np.random.default_rng()
+    R1 = rng.normal(0, 1, 2)
+    R2 = rng.normal(0, 1, 2)
+    # compute the new positions
+    dx1 = dt * D / kT * F1 + np.sqrt(2 * D * dt) * R1
+    dx2 = dt * D / kT * F2 + np.sqrt(2 * D * dt) * R2
+    return dx1, dx2
+
+
+
+def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded=False, r_max=5):
     '''
     :param dt: the time step
     :param k: the spring constant
@@ -78,17 +111,18 @@ def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps):
     rng = np.random.default_rng()
     # iterate over the time steps
     for i in range(1,N_steps):
-        # compute the force on each particle
-        r = np.linalg.norm(X[i-1, 0:2] - X[i-1, 2:4])
-        F_magnitude = harmonic_potential_derivative(r, r0, k) # units of kT/A
-        F1 = -F_magnitude * (X[i-1, 0:2] - X[i-1, 2:4]) / r
-        F2 = -F_magnitude * (X[i-1, 2:4] - X[i-1, 0:2]) / r
-        # compute the random forces
-        R1 = rng.normal(0, 1, 2)
-        R2 = rng.normal(0, 1, 2)
-        # compute the new positions
-        dx1 = dt * D / kT * F1 + np.sqrt(2 * D * dt) * R1 # TODO verify BD equation
-        dx2 = dt * D / kT * F2 + np.sqrt(2 * D * dt) * R2
+        # # compute the force on each particle
+        # r = np.linalg.norm(X[i-1, 0:2] - X[i-1, 2:4])
+        # F_magnitude = harmonic_potential_derivative(r, r0, k) # units of kT/A
+        # F1 = -F_magnitude * (X[i-1, 0:2] - X[i-1, 2:4]) / r
+        # F2 = -F_magnitude * (X[i-1, 2:4] - X[i-1, 0:2]) / r
+        # # compute the random forces
+        # R1 = rng.normal(0, 1, 2)
+        # R2 = rng.normal(0, 1, 2)
+        # # compute the new positions
+        # dx1 = dt * D / kT * F1 + np.sqrt(2 * D * dt) * R1 # TODO verify BD equation
+        # dx2 = dt * D / kT * F2 + np.sqrt(2 * D * dt) * R2
+        dx1, dx2 = compute_dx(dt, D, k, r0, X[i-1, 0:2], X[i-1, 2:4], upper_bounded, r_max)
         X[i,:] = X[i-1,:] + np.hstack((dx1, dx2))
     return T, X
 
@@ -196,16 +230,10 @@ def low_pass_filter(X, alpha):
 
 # write a main function that generates 10000 frames of the simulation and
 # plots the results
-def main():
+def generate_simulation(dt, k, r0, D, T, N_steps, upper_bounded):
     # set the parameters
-    dt = 0.001
-    k = 0.1
-    r0 = 2
-    D = 1
-    T = kT
-    N_steps = 100000
     # run the simulation
-    T, X = brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps)
+    T, X = brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded)
     # apply low-pass filter to the trajectories
     for alpha in [0.1]:
         X_low = low_pass_filter(X, alpha)
@@ -224,6 +252,16 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # add command line arguments: dt, k, r0, D, T, N_steps, upper_bounded
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dt', type=float, default=0.001)
+    parser.add_argument('--k', type=float, default=0.1)
+    parser.add_argument('--r0', type=float, default=2)
+    parser.add_argument('--D', type=float, default=1)
+    parser.add_argument('--T', type=float, default=1)
+    parser.add_argument('--N_steps', type=int, default=100000)
+    parser.add_argument('--upper_bounded', type=bool, default=True)
+    args = parser.parse_args()
+    generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
 
 
