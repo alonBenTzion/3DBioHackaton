@@ -248,6 +248,7 @@ def generate_simulation(dt, k, r0, D, T, N_steps, upper_bounded):
         plt.title('alpha = ' + str(alpha) + '; yscale = log')
         plt.show()
     #plot_MSD(T, X)
+    return T, X
 
 
 
@@ -261,7 +262,22 @@ if __name__ == '__main__':
     parser.add_argument('--T', type=float, default=1)
     parser.add_argument('--N_steps', type=int, default=100000)
     parser.add_argument('--upper_bounded', type=bool, default=True)
+    parser.add_argument('--omitted_frame', type=int, default=1)
     args = parser.parse_args()
-    generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
+    T, X = generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
+
+    # return low resolution data, omit time steps in T and X
+
+    T_low_resolution = T[::args.omitted_frame+1]
+    X_low_resolution = X[::args.omitted_frame+1]
+    T_high_resolution = T
+    X_high_resolution = X
+
+    # output the results to a npy file
+    np.save('T_low_resolution.npy', T_low_resolution)
+    np.save('X_low_resolution.npy', X_low_resolution)
+    np.save('T_high_resolution.npy', T_high_resolution)
+    np.save('X_high_resolution.npy', X_high_resolution)
+
 
 
