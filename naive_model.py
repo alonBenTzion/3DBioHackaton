@@ -28,7 +28,7 @@ def get_high_resolution(X_low, omit_factor, dt, D):
         for j in range(1, omit_factor):
             position_j_minus_1 = X_high[i * omit_factor + j - 1, :]
             position_j = X_low[i + 1, :]
-            X_high[i * omit_factor + j] = compute_next_frame(
+            X_high[i * omit_factor + j, :] = compute_next_frame(
                 position_j_minus_1,
                 position_j,
                 omit_factor -
