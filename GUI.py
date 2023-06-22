@@ -21,6 +21,7 @@ def convert_from_traj_to_matrix(traj_npy_file):
     :return:
     """
     data = np.load(traj_npy_file)
+    data = data[:1000]
     # move the x coordinates 10 to the right, and the y coordinates 10 to the up:
     data[:, 0] += 10
     data[:, 1] += 10
@@ -177,9 +178,9 @@ class GIFLabel(tk.Label):
 
 
 # Function to run the scripts and generate outputs
-def run_scripts(input_file):
+def run_scripts(data):
     # Load the input data from the numpy file
-    data = np.load(input_file)
+    # data = np.load(input_file)
 
     # Run script 1
     # Perform operations on data and generate output1
@@ -228,14 +229,23 @@ root.state('zoomed')
 
 # Function to handle the button click event
 def browse_file():
+    # clean the window
+    for widget in root.winfo_children():
+        widget.destroy()
+
+
     # Open file dialog to select the input file
     file_path = filedialog.askopenfilename(filetypes=[("Numpy Files", "*.npy")])
     if file_path:
-        run_scripts(file_path)
+        get_params_from_file(file_path)
+        # run_scripts(file_path)
+        run_scripts(convert_from_traj_to_matrix(file_path))
+    browse_button.pack_forget()
 
 # Create and position the GUI components
-browse_button = tk.Button(root, text="Browse", command=browse_file)
+browse_button = tk.Button(root, text="Browse low-resolution Video", command=browse_file)
 browse_button.pack()
+
 
 # Function to handle the button click event
 def get_params():
@@ -243,22 +253,30 @@ def get_params():
     file_path = filedialog.askopenfilename(filetypes=[("Numpy Files", "*.npy")])
     if file_path:
         data = np.load(file_path)
-        trajectory1 = data[:70000:, 0:2]
-        trajectory2 = data[:70000:, 2:4]
-        distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
-        k, R = analyze_interaction.estimate_K_and_R(trajectory1, trajectory2)
-        # print the results on the screen with tkinter
-        tk.Label(root, text=f"spring constant (K) = {k}").pack()
-        tk.Label(root, text=f"Spring distance at rest (R_0) = {R}").pack()
+        get_params_from_file(data)
 
-        # add 10 to each coordinate:
-        trajectory1 = (trajectory1 + 10)*100
-        trajectory2 = (trajectory2 + 10)*100
-        plot_trajectories_as_video(trajectory1, trajectory2)
+
+def get_params_from_file(file_fath):
+    data = np.load(file_fath)
+    trajectory1 = data[:70000:, 0:2]
+    trajectory2 = data[:70000:, 2:4]
+    # distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
+    # k, R = analyze_interaction.estimate_K_and_R(trajectory1, trajectory2)
+    k, R_0, R_max = analyze_interaction.predict_parameters(data)
+    # print the results on the screen with tkinter
+    tk.Label(root, text=f"spring constant (K) = {k}").pack()
+    tk.Label(root, text=f"Spring distance at rest (R_0) = {R_0}").pack()
+    tk.Label(root, text=f"Maximal Spring distance (R max) = {R_max}").pack()
+    # add 10 to each coordinate:
+    trajectory1 = (trajectory1 + 10) * 100
+    trajectory2 = (trajectory2 + 10) * 100
+    # plot_trajectories_as_video(trajectory1, trajectory2)
+
+
 
 # Create and position the GUI components
-browse_button = tk.Button(root, text="Get Params", command=get_params)
-browse_button.pack()
+# browse_button = tk.Button(root, text="Get Params", command=get_params)
+# browse_button.pack()
 
 # Start the GUI event loop
 root.mainloop()
