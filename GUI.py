@@ -6,13 +6,27 @@ import matplotlib.pyplot as plt
 import cv2
 import matplotlib.animation as animation
 from IPython.display import HTML
+from scipy.ndimage import distance_transform_edt
+
+def override_circle(matrix, num):
+    # Find the coordinates of the cell containing the number 1
+    index = np.argwhere(matrix == num)[0]
+
+    # Calculate the Euclidean distance from each cell to the cell containing the number 1
+    distances = distance_transform_edt(matrix != num)
+
+    # Set all cells within a circular region (distance <= radius) to the value 1
+    radius = 3  # Adjust the radius as needed
+    matrix[distances <= radius] = num
+
+    return matrix
 
 
 import analyze_interaction
+import naive_model
 
 
-
-def convert_from_traj_to_matrix(traj_npy_file):
+def convert_from_traj_to_matrix(data):
     """
     reads a trajectory file and converts it to a 3D matrix, where each frame is a 2D matrix, and the pixels are the values in the trajectory.
     the 2 first columns in the trajectory are the x,y coordinates of the first particle, and the next 2 columns are the x,y coordinates of the second particle.
@@ -20,7 +34,7 @@ def convert_from_traj_to_matrix(traj_npy_file):
     :param traj_npy_file:
     :return:
     """
-    data = np.load(traj_npy_file)
+    # data = np.load(traj_npy_file)
     data = data[:1000]
     # move the x coordinates 10 to the right, and the y coordinates 10 to the up:
     data[:, 0] += 10
@@ -116,6 +130,16 @@ def from_numpy_to_gif(np_arr, name="script_i"):
     :return:
     """
     np_arr = np_arr.astype(np.uint8)
+    # sum every row with the row above it, and then sum every column with the column to the left of it:
+    # np_arr = np_arr.cumsum(axis=0)
+    # np_arr = np_arr.cumsum(axis=1)
+    # sum every row with the row below it, and then sum every column with the column to the right of it:
+    # np_arr = np_arr[::-1, ::-1]
+    # np_arr = np_arr.cumsum(axis=0)
+    # np_arr = np_arr.cumsum(axis=1)
+    # np_arr = np_arr[::-1, ::-1]
+    np_arr = override_circle(np_arr, 1)
+    np_arr = override_circle(np_arr, 2)
     height, width = np_arr.shape[1:]  # Get height and width of the frames
     rgb_arr = np.zeros((np_arr.shape[0], height, width, 3), dtype=np.uint8)  # Create RGB array
 
@@ -184,10 +208,11 @@ def run_scripts(data):
 
     # Run script 1
     # Perform operations on data and generate output1
-    output1 = script1(data)
-    up_res = from_numpy_to_gif(output1, name="up_resolution")
-    original = from_numpy_to_gif(data, name="original")
-    converted = from_numpy_to_gif(convert_from_traj_to_matrix("/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/X_high_resolution.npy"), name="converted")
+    # output1 = script1(data)
+    output1 = naive_model.get_high_resolution(data, 2, 0.001, 1)
+    up_res = from_numpy_to_gif(convert_from_traj_to_matrix(output1), name="up_resolution")
+    original = from_numpy_to_gif(convert_from_traj_to_matrix(data), name="original")
+    # converted = from_numpy_to_gif(convert_from_traj_to_matrix("/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/X_high_resolution.npy"), name="converted")
 
 
 
@@ -204,7 +229,7 @@ def run_scripts(data):
 
 
 
-    show_outputs(["/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/7IsD.gif", original, up_res, converted])
+    show_outputs([original, up_res])
 
 
 # Function to show video/gif output
@@ -231,7 +256,9 @@ root.state('zoomed')
 def browse_file():
     # clean the window
     for widget in root.winfo_children():
-        widget.destroy()
+        # remove only the widgets that are not the button
+        if widget.winfo_class() != 'Button':
+            widget.destroy()
 
 
     # Open file dialog to select the input file
@@ -239,8 +266,8 @@ def browse_file():
     if file_path:
         get_params_from_file(file_path)
         # run_scripts(file_path)
-        run_scripts(convert_from_traj_to_matrix(file_path))
-    browse_button.pack_forget()
+        # run_scripts(convert_from_traj_to_matrix(file_path))
+        run_scripts(np.load(file_path))
 
 # Create and position the GUI components
 browse_button = tk.Button(root, text="Browse low-resolution Video", command=browse_file)
