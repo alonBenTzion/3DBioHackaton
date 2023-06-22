@@ -145,7 +145,8 @@ def label_interaction_frames(trajectory1, trajectory2):
     return interaction_frames[mask]
 
 # -> Tuple(float, float, float)
-def predict_parameters(trajectories_matrix:np.ndarray)-> tuple[float, float, float]:
+def predict_parameters(trajectories_matrix:np.ndarray)-> Tuple[float,
+float, float]:
     """
     Predicts parameters based on the data in a NumPy .npy file.
 
