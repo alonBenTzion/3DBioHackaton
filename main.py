@@ -3,12 +3,10 @@ import matplotlib.pyplot as plt
 import argparse
 import matplotlib.pyplot as plt
 
-import naive_model
 
-kT = 0.6  # Boltzmann constant kcal/mol at room temperature
+kT = 0.6 # Boltzmann constant kcal/mol at room temperature
 frame_max = 10
 frame_min = -10
-
 
 # General comments:
 # ==================
@@ -30,7 +28,6 @@ def harmonic_potential(r, r0, k):
     '''
     return 0.5 * k * (r - r0) ** 2
 
-
 def harmonic_potential_derivative(r, r0, k):
     '''
     computes the derivative of the harmonic potential where k=1 kT/A^2.
@@ -39,7 +36,6 @@ def harmonic_potential_derivative(r, r0, k):
     @param k - the spring constant
     '''
     return k * (r - r0)
-
 
 # return the derivative of a bounded harmonic potential (i.e. a potential
 # that is zero outside of a certain range)
@@ -54,7 +50,7 @@ def get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_max):
     '''
     decay_threshold = 0.5 * (r0 + r_max)
     F_decay_threshold = harmonic_potential_derivative(decay_threshold, r0, k)
-    if r > r_max:
+    if  r > r_max:
         return 0
     elif r > decay_threshold:
         # interploate from decay threshold, where the potential is
@@ -63,10 +59,8 @@ def get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_max):
     else:
         return harmonic_potential_derivative(r, r0, k)
 
-
-# Compute thh force on each particle in each time step based on the
-# previous positions get the previous positions of the particles and
-# returns dx1 and dx2
+# Compute thh force on each particle in each time step based on the previous positions
+# get the previous positions of the particles and returns dx1 and dx2
 def compute_dx(dt, D, k, r0, x1, x2, upper_bounded=False, r_max=10):
     '''
     computes the change in position of the two particles based on the
@@ -81,11 +75,9 @@ def compute_dx(dt, D, k, r0, x1, x2, upper_bounded=False, r_max=10):
     # compute the force on each particle
     r = np.linalg.norm(x1 - x2)
     if upper_bounded:
-        F_magnitude = get_harmonic_potential_derivative_upper_bounded(r, r0,
-                                                                      k,
-                                                                      r_max)
+        F_magnitude = get_harmonic_potential_derivative_upper_bounded(r, r0, k, r_max)
     else:
-        F_magnitude = harmonic_potential_derivative(r, r0, k)  # units of kT/A
+        F_magnitude = harmonic_potential_derivative(r, r0, k) # units of kT/A
     F1 = -F_magnitude * (x1 - x2) / r
     F2 = -F_magnitude * (x2 - x1) / r
     # compute the random forces
@@ -98,8 +90,8 @@ def compute_dx(dt, D, k, r0, x1, x2, upper_bounded=False, r_max=10):
     return dx1, dx2
 
 
-def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps,
-                                  upper_bounded=False, r_max=5):
+
+def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded=False, r_max=5):
     '''
     :param dt: the time step
     :param k: the spring constant
@@ -118,20 +110,18 @@ def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps,
     T = np.arange(0, N_steps * dt, dt)
     # initialize the position matrix
     X = np.zeros((N_steps, 4))
-    X[0, :] = np.hstack((x1, x2))  # TODO: make sure hstack is correct
+    X[0,:] = np.hstack((x1, x2)) # TODO: make sure hstack is correct
     # initialize the random number generator
     rng = np.random.default_rng()
     # iterate over the time steps
-    for i in range(1, N_steps):
-        dx1, dx2 = compute_dx(dt, D, k, r0, X[i - 1, 0:2], X[i - 1, 2:4],
-                              upper_bounded, r_max)
-        X[i, :] = X[i - 1, :] + np.hstack((dx1, dx2))
+    for i in range(1,N_steps):
+        dx1, dx2 = compute_dx(dt, D, k, r0, X[i-1, 0:2], X[i-1, 2:4], upper_bounded, r_max)
+        X[i,:] = X[i-1,:] + np.hstack((dx1, dx2))
 
         # update all coordinates if they are above a certain value
-        X[i, :] = np.where(X[i, :] > frame_max, frame_max, X[i, :])
-        X[i, :] = np.where(X[i, :] < frame_min, frame_min, X[i, :])
+        X[i,:] = np.where(X[i,:] > frame_max, frame_max, X[i,:])
+        X[i,:] = np.where(X[i,:] < frame_min, frame_min, X[i,:])
     return T, X
-
 
 # Please plot the trajectories of the two particles.
 # Please plot the distance between the two particles as a function of time.
@@ -146,7 +136,7 @@ def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps,
 # Please plot the probability distribution of the angle between the two
 # particles at the end of the simulation, conditioned on the distance between
 # the two particles being 2 um.
-def plot_trajectories(T, X, complicated=False, title=''):
+def plot_trajectories(X, complicated= False, title=''):
     '''
     plots the trajectories of the two particles.
     @param T - the time vector
@@ -158,20 +148,17 @@ def plot_trajectories(T, X, complicated=False, title=''):
         # plot both series on the same plot
         # use a gradient of colors to show the time evolution
         for i in range(X.shape[0]):
-            plt.plot(X[i, 0], X[i, 1], 'o',
-                     color=plt.cm.Blues(i / X.shape[0]))
+            plt.plot(X[i, 0], X[i, 1], 'o', color=plt.cm.Blues(i / X.shape[0]))
             plt.plot(X[i, 2], X[i, 3], 'o', color=plt.cm.Reds(i / X.shape[0]))
     else:
         # plot both series on the same plot
         plt.plot(X[:, 0], X[:, 1], label='particle 1')
         plt.plot(X[:, 2], X[:, 3], label='particle 2')
+    plt.title(title)
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()
-    # add a title
-    plt.title(title)
     plt.show()
-
 
 # Please plot the MSD (mean squared displacement) of the two particles as a
 # function of time.
@@ -193,9 +180,7 @@ def plot_MSD(T, X):
     plt.xlabel('time [s]')
     plt.ylabel('MSD [um^2]')
 
-
 import scipy.ndimage as ndimage
-
 
 # plot the distance between x1 and x2 as a function of time
 def plot_distance(T, X):
@@ -211,7 +196,6 @@ def plot_distance(T, X):
     plt.xlabel('time [s]')
     plt.ylabel('distance [um]')
 
-
 # plot histogram of distance over time
 def plot_distance_histogram(T, X, yscale='linear'):
     '''
@@ -223,10 +207,11 @@ def plot_distance_histogram(T, X, yscale='linear'):
     plt.figure()
     r = np.linalg.norm(X[:, 0:2] - X[:, 2:4], axis=1)
     plt.hist(r, bins=100)
-    # plot the log of the histogram
+    #plot the log of the histogram
     plt.yscale(yscale)
     plt.xlabel('distance [um]')
     plt.ylabel('count')
+
 
 
 def low_pass_filter(X, alpha):
@@ -247,23 +232,23 @@ def low_pass_filter(X, alpha):
 def generate_simulation(dt, k, r0, D, T, N_steps, upper_bounded):
     # set the parameters
     # run the simulation
-    T, X = brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps,
-                                         upper_bounded)
+    T, X = brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded)
     # apply low-pass filter to the trajectories
     for alpha in [0.1]:
         X_low = low_pass_filter(X, alpha)
         # plot the results
-        plot_trajectories(T, X_low, complicated=False)
-        plt.title('alpha = ' + str(alpha))
-        plot_distance(T, X_low)
-        plot_distance_histogram(T, X_low, yscale='linear')
-        plt.title('alpha = ' + str(alpha) + '; yscale = linear')
-        plt.show()
-        plot_distance_histogram(T, X_low, yscale='log')
-        plt.title('alpha = ' + str(alpha) + '; yscale = log')
-        plt.show()
-    # plot_MSD(T, X)
+        # plot_trajectories(T, X_low, complicated=False)
+        # plt.title('alpha = ' + str(alpha))
+        # plot_distance(T, X_low)
+        # plot_distance_histogram(T, X_low, yscale='linear')
+        # plt.title('alpha = ' + str(alpha) + '; yscale = linear')
+        # plt.show()
+        # plot_distance_histogram(T, X_low, yscale='log')
+        # plt.title('alpha = ' + str(alpha) + '; yscale = log')
+        # plt.show()
+    #plot_MSD(T, X)
     return T, X
+
 
 
 if __name__ == '__main__':
@@ -278,29 +263,25 @@ if __name__ == '__main__':
     parser.add_argument('--upper_bounded', type=bool, default=True)
     parser.add_argument('--omitted_frame', type=int, default=100)
     args = parser.parse_args()
-    T, X = generate_simulation(args.dt, args.k, args.r0, args.D, args.T,
-                               args.N_steps, args.upper_bounded)
+    T, X = generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
 
     # return low resolution data, omit time steps in T and X
 
-    T_low_resolution = T[::args.omitted_frame + 1]
-    X_low_resolution = X[::args.omitted_frame + 1]
+    T_low_resolution = T[::args.omitted_frame+1]
+    X_low_resolution = X[::args.omitted_frame+1]
     T_high_resolution = T
     X_high_resolution = X
 
-    plot_trajectories(T_low_resolution, X_low_resolution, complicated=True,
+    plot_trajectories(X_high_resolution,
+                      complicated=False, title='high resolution trajectories')
+    plot_trajectories(X_low_resolution, complicated=False,
                       title='low resolution trajectories')
-    plot_trajectories(T_high_resolution, X_high_resolution,
-                      complicated=True, title='high resolution trajectories')
-
-    X_high_naive_model = naive_model.get_high_resolution(X_low_resolution,
-                                                         args.omitted_frame,
-                                                         args.dt, args.D)
-    plot_trajectories(T_high_resolution, X_high_naive_model,
-                      complicated=True, title='naive model')
 
     # output the results to a npy file
     np.save('T_low_resolution.npy', T_low_resolution)
     np.save('X_low_resolution.npy', X_low_resolution)
     np.save('T_high_resolution.npy', T_high_resolution)
     np.save('X_high_resolution.npy', X_high_resolution)
+
+
+
