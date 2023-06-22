@@ -8,6 +8,7 @@ kT = 0.6 # Boltzmann constant kcal/mol at room temperature
 frame_max = 10
 frame_min = -10
 
+
 # General comments:
 # ==================
 # Equation of Brownian dynamics for each indepndent degree of freedom
@@ -146,10 +147,33 @@ def plot_trajectories(X, complicated= False, title=''):
     plt.figure()
     if complicated:
         # plot both series on the same plot
-        # use a gradient of colors to show the time evolution
-        for i in range(X.shape[0]):
-            plt.plot(X[i, 0], X[i, 1], 'o', color=plt.cm.Blues(i / X.shape[0]))
-            plt.plot(X[i, 2], X[i, 3], 'o', color=plt.cm.Reds(i / X.shape[0]))
+        # use a gradient of colors to show the time evolution and put lines
+        # between the points. add a colorbar to show the time evolution.
+        # mark the starting point of the trajectory with a circle and the end
+        # point with a square
+        for i in range(X.shape[0] - 1):
+            plt.plot(X[i:i + 2, 0], X[i:i + 2, 1], '-',
+                     color=plt.cm.Blues(i / X.shape[0]))
+            plt.plot(X[i:i + 2, 2], X[i:i + 2, 3], '-',
+                     color=plt.cm.Reds(i / X.shape[0]))
+        plt.plot(X[0, 0], X[0, 1], 'o', color='black')
+        plt.plot(X[-1, 0], X[-1, 1], 's', color='black')
+
+
+
+
+
+        # for i in range(X.shape[0] - 1):
+        #     plt.plot(X[i:i + 2, 0], X[i:i + 2, 1], '-',
+        #              color=plt.cm.Blues(i / X.shape[0]))
+        #     plt.plot(X[i:i + 2, 2], X[i:i + 2, 3], '-',
+        #              color=plt.cm.Reds(i / X.shape[0]))
+
+
+        # for i in range(X.shape[0]):
+        #     plt.plot(X[i, 0], X[i, 1], 'o',
+        #              color=plt.cm.Blues(i / X.shape[0]))
+        #     plt.plot(X[i, 2], X[i, 3], 'o', color=plt.cm.Reds(i / X.shape[0]))
     else:
         # plot both series on the same plot
         plt.plot(X[:, 0], X[:, 1], label='particle 1')
@@ -250,7 +274,6 @@ def generate_simulation(dt, k, r0, D, T, N_steps, upper_bounded):
     return T, X
 
 
-
 if __name__ == '__main__':
     # add command line arguments: dt, k, r0, D, T, N_steps, upper_bounded
     parser = argparse.ArgumentParser()
@@ -282,6 +305,3 @@ if __name__ == '__main__':
     np.save('X_low_resolution.npy', X_low_resolution)
     np.save('T_high_resolution.npy', T_high_resolution)
     np.save('X_high_resolution.npy', X_high_resolution)
-
-
-
