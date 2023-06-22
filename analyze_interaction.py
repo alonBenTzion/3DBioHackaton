@@ -53,14 +53,13 @@ def estimate_K_and_R(trajectory1, trajectory2, num_bins=100):
         # Define the theoretical histogram function
         # \see scientific summary for the derivation of this function
 
-
     def get_theoretical_ln_hist_harmonic_bounded(d, k, R, R_max, C):
         # the first term is correction for the number of states of distance d
         # the second term is the spring potential that we're fitting
         # TODO: this is buggy - we must use the potential not the derivative
         return np.log(d) + main.get_harmonic_potential_derivative_upper_bounded() + C
 
-    # plot theroretical ln hist as a function of bin centers
+    # plot theoretical ln hist as a function of bin centers
     # from 0.1 to 10.0 for R = 3.0 and k = 0.1
     d = np.linspace(0.1, 10.0, 100)
 
@@ -94,10 +93,34 @@ def estimate_K_and_R(trajectory1, trajectory2, num_bins=100):
     return k, R
 
 
+def label_interaction_frames(trajectory1, trajectory2, sklearn=None):
+    """
+    label frames as interacting or non-interacting
+    :param trajectory1:
+    :param trajectory2:
+    :return:
+    """
+    distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
+    # for each frame, from 50 to the -50, calculate the std of the distances
+    stds = []
+    for i in range(50, len(distances) - 50):
+        std = np.std(distances[i-50:i+50])
+        stds.append(std)
+    stds = np.array(stds)
+    # run K-means on the stds, with 2 clusters
+    k1, k2 = sklearn.cluster.KMeans(n_clusters=2).fit(stds.reshape(-1, 1)).cluster_centers_
+    # get only the frames fro the lower cluster
+    lower_cluster = stds < k1
+    # take only the 75% of the frames with the lowest std
+    lower_cluster = lower_cluster[:int(len(lower_cluster) * 0.75)]
+
+
+            
+
 if __name__ == '__main__':
     data = np.load("/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/X_high_resolution.npy")
-    trajectory1 = data[:70000:, 0:2]
-    trajectory2 = data[:70000:, 2:4]
+    trajectory1 = data[:80000:, 0:2]
+    trajectory2 = data[:80000:, 2:4]
     distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
     k, R = estimate_K_and_R(trajectory1, trajectory2)
 
