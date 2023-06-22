@@ -5,6 +5,38 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 
+import analyze_interaction
+
+
+
+def convert_from_traj_to_matrix(traj_npy_file):
+    """
+    reads a trajectory file and converts it to a 3D matrix, where each frame is a 2D matrix, and the pixels are the values in the trajectory.
+    the 2 first columns in the trajectory are the x,y coordinates of the first particle, and the next 2 columns are the x,y coordinates of the second particle.
+    do transformations to make the matrix look good as a GIF.
+    :param traj_npy_file:
+    :return:
+    """
+    data = np.load(traj_npy_file)
+    # move the x coordinates 10 to the right, and the y coordinates 10 to the up:
+    data[:, 0] += 10
+    data[:, 1] += 10
+    data[:, 2] += 10
+    data[:, 3] += 10
+    # multiply the coordinates by 1000 and then make them integers:
+    data = data * 10
+    data = data.astype(int)
+    trajectory1 = data[:, 0:2]
+    trajectory2 = data[:, 2:4]
+    # create a 3D matrix with the size of the image, and the frames are the trajectory len (first dimension):
+    np_arr = np.zeros((len(data), 201, 201))
+    # for each frame in trajectory 1, insert 1 in the matrix in the coordinates of the particle:
+    for i, frame in enumerate(trajectory1):
+        np_arr[i, frame[0], frame[1]] = 1
+    # for each frame in trajectory 2, insert 2 in the matrix in the coordinates of the particle:
+    for i, frame in enumerate(trajectory2):
+        np_arr[i, frame[0], frame[1]] = 2
+    return np_arr
 
 def show_gif_with_colors(np_arr, name="script_i"):
     """
@@ -111,6 +143,7 @@ def run_scripts(input_file):
     output1 = script1(data)
     up_res = from_numpy_to_gif(output1, name="up_resolution")
     original = from_numpy_to_gif(data, name="original")
+    converted = from_numpy_to_gif(convert_from_traj_to_matrix("/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/X_high_resolution.npy"), name="converted")
 
 
 
@@ -127,7 +160,7 @@ def run_scripts(input_file):
 
 
 
-    show_outputs(["/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/7IsD.gif", original, up_res])
+    show_outputs(["/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/7IsD.gif", original, up_res, converted])
 
 
 # Function to show video/gif output
@@ -161,6 +194,25 @@ def browse_file():
 browse_button = tk.Button(root, text="Browse", command=browse_file)
 browse_button.pack()
 
+# Function to handle the button click event
+def get_params():
+    # Open file dialog to select the input file
+    file_path = filedialog.askopenfilename(filetypes=[("Numpy Files", "*.npy")])
+    if file_path:
+        data = np.load(file_path)
+        trajectory1 = data[:70000:, 0:2]
+        trajectory2 = data[:70000:, 2:4]
+        distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
+        k, R = analyze_interaction.estimate_K_and_R(trajectory1, trajectory2)
+        # print the results on the screen with tkinter
+        tk.Label(root, text=f"spring constant (K) = {k}").pack()
+        tk.Label(root, text=f"Spring distance at rest (R_0) = {R}").pack()
+
+
+# Create and position the GUI components
+browse_button = tk.Button(root, text="Get Params", command=get_params)
+browse_button.pack()
+
 # Start the GUI event loop
 root.mainloop()
 
@@ -180,5 +232,3 @@ def show_gif(np_arr, name="script_i"):
     cv2.destroyAllWindows()
 
 # show_gif(np_arr)
-
-
