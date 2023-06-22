@@ -1,10 +1,28 @@
 """
 tool for analyzing interaction between two molecules. Implements the estimation of K and R from a given interaction
 """
+from typing import Tuple
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import main
+from sklearn.cluster import KMeans
+
+def Energy_func(d, k, R_0, R_max):
+        R_th = 0.5 * (R_0 + R_max)
+        result = np.zeros_like(d)
+
+        mask1 = (d < R_th)
+        result[mask1] = 0.5 * k * (d[mask1] - R_0) ** 2
+
+        mask2 = (d >= R_th) & (d < R_max)
+        result[mask2] = k * (R_th - R_0) ** 2 - 0.5 * k * (d[mask2] - R_max) ** 2
+
+        mask3 = d >= R_max
+
+        result[mask3] = k * (R_th - R_0) ** 2 
+
+        return result
 
 def get_ln_hist(hist, pseudocount_facotr=0.1):
     """
@@ -21,7 +39,7 @@ def test_get_ln_hist():
         assert(np.allclose(ln_hist, np.array([-23.02585093, -2.30258509, 4.60517019, 6.90775528])))
 
 
-def estimate_K_and_R(distances, num_bins=100):
+def estimate_K_R0_R_max(distances, num_bins=100):
     # Create a histogram of the distances
     hist, bin_edges = np.histogram(distances, bins=num_bins)
 
@@ -34,11 +52,11 @@ def estimate_K_and_R(distances, num_bins=100):
     
     # Define the theoretical histogram function
     # See scientific summary for the derivation of this function
-    def get_theoretical_ln_hist_harmonic(d, k, R, C):
+    def get_theoretical_ln_hist_harmonic(d, k, R_0, R_max, C):
         # the first term is correction for the number of states of distance d
         # the second term is the spring potential that we're fitting
         # return np.log(d) - 0.5 * k * (d - R) ** 2 + C
-        return np.log(d) - main.harmonic_potential(d, R, k) + C
+        return np.log(d) - Energy_func(d, k, R_0, R_max) + C
 
     # plot theoretical ln hist as a function of bin centers
     # from 0.1 to 10.0 for R = 3.0 and k = 0.1
@@ -48,6 +66,11 @@ def estimate_K_and_R(distances, num_bins=100):
     # Fit the interaction model to the histogram data
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
     ln_hist = get_ln_hist(hist)
+
+    # Check that energy function looks like we want
+    # test_estimated_function_x_values = np.arange(0, 10.1, 0.1)
+    # y = Energy_func(test_estimated_function_x_values, 0.2, 2.1,5)
+    # plt.plot(test_estimated_function_x_values, y, label="U(d)")
     
     # do curve fit
     # bound the parmeters to be positive
@@ -55,26 +78,31 @@ def estimate_K_and_R(distances, num_bins=100):
                            bin_centers,
                            ln_hist)
    
-    # Extract the spring constant (K) from the fitted parameters
+    # Extract parameters
     k = popt[0]
-    R = popt[1]
-    C = popt[2]
+    R_0 = popt[1]
+    R_max = popt[2]
+    C = popt[3]
+
+    #Print parameters and covariance matrix
     print("K = %f" % k)
-    print("R = %f" % R)
+    print("R0 = %f" % R_0)
+    print("R_Max = %f" % R_max)
     print("C = %f" % C)
     print("Covariance matrix:")
     print(pcov)
+    
     # plot ln hist as a function of bin centers
     plt.plot(bin_centers, ln_hist, '.', label="ln(hist)")
-    plt.plot(d, get_theoretical_ln_hist_harmonic(d, k, R, C), label="theoretical ln(hist)")
-    plt.plot(d, get_theoretical_ln_hist_harmonic(d, 0.1, 2, C), label="true ln(hist)")
+    plt.plot(d, get_theoretical_ln_hist_harmonic(d, k, R_0, R_max, C), label="theoretical ln(hist)")
+    plt.plot(d, get_theoretical_ln_hist_harmonic(d, 0.1, 2, 5, C), label="true ln(hist)")
     plt.legend()
     plt.show()
 
-    return k, R
+    return k, R_0, R_max
 
 
-def label_interaction_frames(trajectory1, trajectory2, sklearn=None):
+def label_interaction_frames(trajectory1, trajectory2):
     """
     label frames as interacting or non-interacting
     :param trajectory1:
@@ -88,56 +116,60 @@ def label_interaction_frames(trajectory1, trajectory2, sklearn=None):
         std = np.std(distances[i-50:i+50])
         stds.append(std)
     stds = np.array(stds)
-    # run K-means on the stds, with 2 clusters
-    k1, k2 = sklearn.cluster.KMeans(n_clusters=2).fit(stds.reshape(-1, 1)).cluster_centers_
-    # get only the frames fro the lower cluster
-    lower_cluster = stds < k1
+    
+    # Cut the 50 first and last frames
+    distances = distances[50:len(distances)-50]
+    
+    # Run K-means on the stds, with 2 clusters
+    kmeans = KMeans(n_clusters=2)
+    kmeans.fit(stds.reshape(-1,1))
+    # k1, _ = cluster.KMeans(n_clusters=2).fit(stds.reshape(-1, 1)).cluster_centers_
+    
+    # Get all the frames with the lower std(K1) = those sumples are suspects to be interaction frames
+    cluster_assignments = kmeans.labels_
+    interaction_frames = distances[cluster_assignments == 0]  
+    
+    # lower_cluster = stds < k1
+    # interaction_frames = distances[lower_cluster]
+    max_dist = np.max(interaction_frames)
+    mask = interaction_frames <= 0.75 * max_dist
+
     # take only the 75% of the frames with the lowest std
-    lower_cluster = lower_cluster[:int(len(lower_cluster) * 0.75)]
+    return interaction_frames[mask]
 
-def estimate_R_max(distances, k, R_0, num_bins=100):
+# -> Tuple(float, float, float)
+def predict_parameters(file_path: str)-> tuple[float, float, float]:
+    """
+    Predicts parameters based on the data in a NumPy .npy file.
 
-    def get_theoretical_R_max(d, R_max):
-        R_th = 0.5 * (R_0 + R_max)
-        result = np.zeros_like(d)
+    Args:
+        file_path (str): Path to the NumPy .npy file containing the data.
 
-        mask1 = (d < R_th)
-        result[mask1] = 0.5 * k * (d[mask1] - R_0) ** 2
+    Returns:
+        object: K, R0, R_Max.
+    """
+    # Get data as a numpy array
+    data = np.load(file_path)
 
-        mask2 = (d >= R_th) & (d < R_max)
-        result[mask2] = k * (R_th - R_0) ** 2 - 0.5 * k * (d[mask2] - R_max) ** 2
+    # Get trajectories of molecules
+    trajectory1 = data[:, 0:2]
+    trajectory2 = data[:, 2:4]
 
-        return result
-        
-    hist, bin_edges = np.histogram(distances, bins=num_bins)    
+    # Get the distances of interaction frames
+    interaction_dists = label_interaction_frames(trajectory1,trajectory2)
 
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
-    ln_hist = get_ln_hist(hist)    
+    # Predict params based on heuristic that is detailed in the scientific report
+    k, R_0, R_max = estimate_K_R0_R_max(interaction_dists)     
 
-    popt, pcov = curve_fit(get_theoretical_R_max,
-                           bin_centers,
-                           ln_hist)    
+    return k, R_0, R_max
 
-    R_m = popt[0]
-    print("R max = %f" % R_m)
-    print("Covariance matrix:")
-    print(pcov)
-   
-    # plot ln hist as a function of bin centers
-    # plt.plot(bin_centers, ln_hist, '.', label="ln(hist)")
-    # plt.plot(d, get_theoretical_ln_hist_harmonic(d, k, R, C), label="theoretical ln(hist)")
-    # plt.plot(d, get_theoretical_ln_hist_harmonic(d, 0.1, 2, C), label="true ln(hist)")
-    # plt.legend()
-    # plt.show()
-
-    return R_m
-            
-
-if __name__ == '__main__':
-    data = np.load("/Users/alonbentzion/Desktop/university/3DBioHackaton/X_high_resolution.npy")
-    trajectory1 = data[:80000:, 0:2]
-    trajectory2 = data[:80000:, 2:4]
-    distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
-    k, R_0 = estimate_K_and_R(distances)
-    R_max = estimate_R_max(distances, k, R_0, num_bins=100)
+# if __name__ == '__main__':
+file_path = "/Users/alonbentzion/Desktop/university/3DBioHackaton/X_high_resolution.npy"
+#     data = np.load("/Users/alonbentzion/Desktop/university/3DBioHackaton/X_high_resolution.npy")
+#     trajectory1 = data[:, 0:2]
+#     trajectory2 = data[:, 2:4]
+#     # distances = np.linalg.norm(trajectory1 - trajectory2, axis=1)
+#     distances = label_interaction_frames(trajectory1,trajectory2)
+k, R_0, R_max = predict_parameters(file_path)
+#    # R_max = estimate_R_max(distances, k, R_0, num_bins=100)
 
