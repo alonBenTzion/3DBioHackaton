@@ -88,7 +88,7 @@ def estimate_K_R0_R_max(distances, num_bins=100):
     k = popt[0]
     R_0 = popt[1]
     R_max = popt[2]
-    # C = popt[3]
+    C = popt[3]
     
     # print(popt)
     # #Print parameters and covariance matrix
@@ -100,11 +100,11 @@ def estimate_K_R0_R_max(distances, num_bins=100):
     # print(pcov)
     
     # # plot ln hist as a function of bin centers
-    # plt.plot(bin_centers, ln_hist, '.', label="ln(hist)")
-    # plt.plot(bin_centers, get_theoretical_ln_hist_harmonic(bin_centers, k, R_0, R_max, C), label="theoretical ln(hist)")
-    # plt.plot(bin_centers, get_theoretical_ln_hist_harmonic(bin_centers, 0.1, 2, 5, C), label="true ln(hist)")
-    # plt.legend()
-    # plt.show()
+    plt.plot(bin_centers, ln_hist, '.', label="ln(hist)")
+    plt.plot(bin_centers, get_theoretical_ln_hist_harmonic(bin_centers, k, R_0, R_max, C), label="theoretical ln(hist)")
+    plt.plot(bin_centers, get_theoretical_ln_hist_harmonic(bin_centers, 0.1, 2, 5, C), label="true ln(hist)")
+    plt.legend()
+    plt.show()
 
     return k, R_0, R_max
 

@@ -8,6 +8,9 @@ import matplotlib.animation as animation
 from IPython.display import HTML
 from scipy.ndimage import distance_transform_edt
 
+import parametric_model
+
+
 def override_circle(matrix, num):
     # Find the coordinates of the cell containing the number 1
     index = np.argwhere(matrix == num)[0]
@@ -154,12 +157,13 @@ def from_numpy_to_gif(np_arr, name="script_i"):
 
 # Function to show multiple outputs side by side
 def show_outputs(outputs):
+    names = ["Low resolution", "High resolution - \nNaive", "High resolution - \nParametric"]
     num_outputs = len(outputs)
     fig, axes = plt.subplots(1, num_outputs, figsize=(12, 4))
     for i in range(num_outputs):
         output = outputs[i]
         if isinstance(output, str):  # Handle GIF output
-            gif_label = GIFLabel(root, output, f"{i}'th GIF:")
+            gif_label = GIFLabel(root, output, names[i])
             # set title to the GIF
             gif_label.title.pack(side="left")
             gif_label.pack(side="left")
@@ -210,7 +214,11 @@ def run_scripts(data):
     # Perform operations on data and generate output1
     # output1 = script1(data)
     output1 = naive_model.get_high_resolution(data, 2, 0.001, 1)
-    up_res = from_numpy_to_gif(convert_from_traj_to_matrix(output1), name="up_resolution")
+    up_res_naive = from_numpy_to_gif(convert_from_traj_to_matrix(output1), name="up_resolution")
+
+    output2 = parametric_model.get_high_resolution(data, 2, 0.001, 1)
+    up_res_par = from_numpy_to_gif(convert_from_traj_to_matrix(output2), name="up_resolution")
+
     original = from_numpy_to_gif(convert_from_traj_to_matrix(data), name="original")
     # converted = from_numpy_to_gif(convert_from_traj_to_matrix("/Users/michaleldar/Documents/year3/3DStructure/3DBioHackaton/X_high_resolution.npy"), name="converted")
 
@@ -229,7 +237,7 @@ def run_scripts(data):
 
 
 
-    show_outputs([original, up_res])
+    show_outputs([original, up_res_naive, up_res_par])
 
 
 # Function to show video/gif output
