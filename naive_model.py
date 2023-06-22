@@ -2,6 +2,12 @@ import numpy as np
 
 
 def compute_next_frame(position_i_minus_1, position_i, k, dt, D):
+    '''
+    compute the next frame of the high resolution video
+    :param position_i_minus_1: position of the previous frame
+    :param position_i: position of the current frame
+    :param k: omit factor - the previous iterations
+    '''
     # compute the random forces
     rng = np.random.default_rng()
     R1 = rng.normal(0, 1, 2)
@@ -22,6 +28,12 @@ def compute_next_frame(position_i_minus_1, position_i, k, dt, D):
 
 
 def get_high_resolution(X_low, omit_factor, dt, D):
+    '''
+    get the high resolution video from the low resolution video
+    :param X_low: low resolution video
+    :param omit_factor: number of frames that were omitted
+    :return: X_high: high resolution video
+    '''
     X_high = np.zeros((omit_factor * X_low.shape[0] - omit_factor + 1, 4))
     for i in range(0, X_low.shape[0] - 1):
         X_high[i * omit_factor, :] = X_low[i, :]
@@ -36,7 +48,3 @@ def get_high_resolution(X_low, omit_factor, dt, D):
     X_high[-1, :] = X_low[-1, :]
     print(X_high)
     return X_high
-
-#
-# if __name__ == '__main__':
-#     get_low_resolution()
