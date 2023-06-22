@@ -30,20 +30,25 @@ def plot_trajectories(X, complicated= False, title=''):
     plt.show()
 
 
-def estimate_parameters(r0, r_max, K):
+def estimate_parameters(r0, r_max, K, X_high_resolution):
     '''
     estimate the parameters of the model
     '''
     # read the data
-    omit_factor_iteration = [2**i for i in range(11)]
+    omit_factor_iteration = [2**i for i in range(10)]
     estimated_r0 = []
     estimated_r_max = []
     estimated_K = []
     for num_frames in omit_factor_iteration:
-        # X_low_resolution = X_high_resolution[::num_frames+1]
+        X_low_resolution = X_high_resolution[::num_frames+1]
+        # save X_low_resolution to a npy file in npy_files folder
+        # filename = 'npy_files/X_low_resolution_{}.npy'.format(num_frames)
+        # np.save(filename, X_low_resolution)
+
         # compute the parameters
-        predicted_r0, predicted_r_max, predicted_K = 2-0.1, 10-1, 0.1-0.01
-        # r0, r_max, K = analyze_interaction.estimate_parameters(X_low_resolution)
+        # predicted_r0, predicted_r_max, predicted_K = 2-0.1, 10-1, 0.1-0.01
+        predicted_K, predicted_r0, predicted_r_max \
+            = analyze_interaction.predict_parameters(X_low_resolution)
         estimated_r0.append(abs(r0-predicted_r0))
         estimated_r_max.append(abs(r_max-predicted_r_max))
         estimated_K.append(abs(K-predicted_K))
@@ -80,7 +85,7 @@ if __name__ == '__main__':
     # read npy files
     X_high_resolution = np.load(args.high_res_filename)
     plot_trajectories(X_high_resolution, complicated=False, title='high resolution data')
-    estimate_parameters(2, 10, 0.1)
+    estimate_parameters(2, 10, 0.1, X_high_resolution)
     # # return low resolution data, omit time steps
     # # loop over array with multiplied values 1,2,4,8,16,32,64,128,256,512,1024...
     # for num_frames in [2**i for i in range(11)]:
