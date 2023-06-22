@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import argparse
 import matplotlib.pyplot as plt
 
-import naive_model
 
 kT = 0.6 # Boltzmann constant kcal/mol at room temperature
 frame_max = 10
@@ -137,7 +136,7 @@ def brownian_dynamics_2_particles(dt, k, r0, D, T, N_steps, upper_bounded=False,
 # Please plot the probability distribution of the angle between the two
 # particles at the end of the simulation, conditioned on the distance between
 # the two particles being 2 um.
-def plot_trajectories(T, X, complicated= False, title=''):
+def plot_trajectories(X, complicated= False, title=''):
     '''
     plots the trajectories of the two particles.
     @param T - the time vector
@@ -238,15 +237,15 @@ def generate_simulation(dt, k, r0, D, T, N_steps, upper_bounded):
     for alpha in [0.1]:
         X_low = low_pass_filter(X, alpha)
         # plot the results
-        plot_trajectories(T, X_low, complicated=False)
-        plt.title('alpha = ' + str(alpha))
-        plot_distance(T, X_low)
-        plot_distance_histogram(T, X_low, yscale='linear')
-        plt.title('alpha = ' + str(alpha) + '; yscale = linear')
-        plt.show()
-        plot_distance_histogram(T, X_low, yscale='log')
-        plt.title('alpha = ' + str(alpha) + '; yscale = log')
-        plt.show()
+        # plot_trajectories(T, X_low, complicated=False)
+        # plt.title('alpha = ' + str(alpha))
+        # plot_distance(T, X_low)
+        # plot_distance_histogram(T, X_low, yscale='linear')
+        # plt.title('alpha = ' + str(alpha) + '; yscale = linear')
+        # plt.show()
+        # plot_distance_histogram(T, X_low, yscale='log')
+        # plt.title('alpha = ' + str(alpha) + '; yscale = log')
+        # plt.show()
     #plot_MSD(T, X)
     return T, X
 
@@ -262,7 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('--T', type=float, default=1)
     parser.add_argument('--N_steps', type=int, default=100000)
     parser.add_argument('--upper_bounded', type=bool, default=True)
-    parser.add_argument('--omitted_frame', type=int, default=1)
+    parser.add_argument('--omitted_frame', type=int, default=100)
     args = parser.parse_args()
     T, X = generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
 
@@ -273,16 +272,10 @@ if __name__ == '__main__':
     T_high_resolution = T
     X_high_resolution = X
 
-    plot_trajectories(T_low_resolution, X_low_resolution, complicated=False,
-                      title='low resolution trajectories')
-    plot_trajectories(T_high_resolution, X_high_resolution,
+    plot_trajectories(X_high_resolution,
                       complicated=False, title='high resolution trajectories')
-
-    X_high_naive_model = naive_model.get_high_resolution(X_low_resolution,
-                                                         args.omitted_frame,
-                                                         args.dt, args.D)
-    plot_trajectories(T_high_resolution, X_high_naive_model,
-                      complicated=False, title='naive model')
+    plot_trajectories(X_low_resolution, complicated=False,
+                      title='low resolution trajectories')
 
     # output the results to a npy file
     np.save('T_low_resolution.npy', T_low_resolution)
