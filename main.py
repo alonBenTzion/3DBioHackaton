@@ -263,7 +263,7 @@ if __name__ == '__main__':
     parser.add_argument('--T', type=float, default=1)
     parser.add_argument('--N_steps', type=int, default=100000)
     parser.add_argument('--upper_bounded', type=bool, default=True)
-    parser.add_argument('--omitted_frame', type=int, default=4)
+    parser.add_argument('--omitted_frame', type=int, default=100)
     args = parser.parse_args()
     T, X = generate_simulation(args.dt, args.k, args.r0, args.D, args.T, args.N_steps, args.upper_bounded)
 
@@ -284,6 +284,12 @@ if __name__ == '__main__':
                                                          args.dt, args.D)
     plot_trajectories(T_high_resolution, X_high_naive_model,
                       complicated=False, title='naive model')
+
+
+
+
+
+
 
     # output the results to a npy file
     np.save('T_low_resolution.npy', T_low_resolution)
