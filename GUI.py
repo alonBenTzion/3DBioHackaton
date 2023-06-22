@@ -4,6 +4,9 @@ from PIL import Image, ImageTk
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
+import matplotlib.animation as animation
+from IPython.display import HTML
+
 
 import analyze_interaction
 
@@ -36,7 +39,47 @@ def convert_from_traj_to_matrix(traj_npy_file):
     # for each frame in trajectory 2, insert 2 in the matrix in the coordinates of the particle:
     for i, frame in enumerate(trajectory2):
         np_arr[i, frame[0], frame[1]] = 2
+    # return only the forst 100 frames:
+    np_arr = np_arr[:100]
+    # spread each pixel to 10x10 pixels:
+    # np_arr = np.repeat(np_arr, 10, axis=1)
+    np_arr = np.repeat(np_arr, 10, axis=0)
     return np_arr
+
+
+def plot_trajectories_as_video(trajectory1, trajectory2):
+    """
+    plot animation on trajectory1 and trajectory 2 using matplotlib.animation
+    :param trajectory1:
+    :param trajectory2:
+    :return:
+    """
+    # cut only the first 1000 frames:
+    trajectory1 = trajectory1[:1000] / 10
+    trajectory2 = trajectory2[:1000] / 10
+    trajectory1 = trajectory1.astype(int)
+    trajectory2 = trajectory2.astype(int)
+    fig = plt.figure()
+    ax = plt.axes(xlim=(0, 200), ylim=(0, 200))
+    line1, = ax.plot([], [], lw=2)
+    line2, = ax.plot([], [], lw=2)
+
+    def init():
+        line1.set_data([], [])
+        line2.set_data([], [])
+        return line1, line2
+
+    def animate(i):
+        line1.set_data(trajectory1[:i, 0], trajectory1[:i, 1])
+        line2.set_data(trajectory2[:i, 0], trajectory2[:i, 1])
+        return line1, line2
+
+    anim = animation.FuncAnimation(fig, animate, init_func=init,
+                                   frames=len(trajectory1), interval=20, blit=True)
+    plt.show()
+    anim.save('basic_animation.mp4', fps=100, extra_args=['-vcodec', 'libx264'])
+    HTML(anim.to_jshtml())
+
 
 def show_gif_with_colors(np_arr, name="script_i"):
     """
@@ -208,6 +251,10 @@ def get_params():
         tk.Label(root, text=f"spring constant (K) = {k}").pack()
         tk.Label(root, text=f"Spring distance at rest (R_0) = {R}").pack()
 
+        # add 10 to each coordinate:
+        trajectory1 = (trajectory1 + 10)*100
+        trajectory2 = (trajectory2 + 10)*100
+        plot_trajectories_as_video(trajectory1, trajectory2)
 
 # Create and position the GUI components
 browse_button = tk.Button(root, text="Get Params", command=get_params)
